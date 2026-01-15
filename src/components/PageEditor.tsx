@@ -3,9 +3,14 @@ import { Page, BlockType, Block } from '../types/workspace';
 import { Block as BlockComponent } from './Block';
 import { Plus, History } from 'lucide-react'; // Added History import
 import { motion } from 'framer-motion';
-import { ExportMenu } from './page/ExportMenu';
-import { VersionHistory } from './VersionHistory';
 
+// 1. Import the hook
+import { useToast } from '../hooks/use-toast'; 
+
+// FIX: Import from the correct location in 'src/pages/'
+import { PageCover } from "../pages/PageCover";
+import { ExportMenu } from "./page/ExportMenu";
+import { VersionHistory } from "./VersionHistory";
 interface PageEditorProps {
   page: Page | undefined;
   onAddBlock: (type: BlockType) => void;
@@ -22,6 +27,53 @@ export const PageEditor: React.FC<PageEditorProps> = ({
   onUpdatePageTitle,
 }) => {
   const [showHistory, setShowHistory] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  
+  // 2. Initialize the toast
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isTitleEditing && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [isTitleEditing]);
+  // Removed local state for title editing (isTitleEditing, titleInputRef)
+
+  // --- Wrapper Functions for Toasts ---
+
+  const handleAddBlock = (type: BlockType) => {
+    onAddBlock(type);
+    toast({
+      title: "Block created",
+      description: "A new block has been added to the page.",
+      duration: 3000,
+    });
+  };
+
+  const handleDeleteBlock = (blockId: string) => {
+    onDeleteBlock(blockId);
+    toast({
+      title: "Block deleted",
+      description: "The block has been removed.",
+      duration: 3000,
+      // You can add variant: "destructive" here if you want it red, 
+      // but usually 'success' (default) implies the *action* succeeded.
+    });
+  };
+
+  const handleUpdateBlock = (blockId: string, updates: Partial<Block>) => {
+    onUpdateBlock(blockId, updates);
+    // Note: If onUpdateBlock fires on every keystroke, this will spam toasts.
+    // Ideally, ensure onUpdateBlock is debounced or only fires on blur.
+    toast({
+      title: "Block updated",
+      description: "Your changes have been saved.",
+      duration: 3000,
+    });
+  };
+
+  // ------------------------------------
 
   if (!page) {
     return (
@@ -113,6 +165,50 @@ export const PageEditor: React.FC<PageEditorProps> = ({
                     Add your first block
                   </button>
                 </div>
+                <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">
+                  This page is empty
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
+                  Type <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs">/</kbd> to insert blocks
+                </p>
+                <button
+                  onClick={() => handleAddBlock('paragraph')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors text-sm font-medium"
+                >
+                  <Plus size={16} />
+                  Add your first block
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <div className="space-y-1">
+              {page.blocks.map((block, index) => (
+                <motion.div
+                  key={block.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.02 }}
+                >
+                  <BlockComponent
+                    block={block}
+                    onUpdate={(updates) => handleUpdateBlock(block.id, updates)}
+                    onDelete={() => handleDeleteBlock(block.id)}
+                    onAddBlock={() => handleAddBlock('paragraph')}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* Add Block Button - Always visible at bottom */}
+          <div className="mt-8 mb-12">
+            <button
+              onClick={() => handleAddBlock('paragraph')}
+              className="group flex items-center gap-2 px-3 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors w-full"
+            >
+              <Plus size={18} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="text-sm">Type <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs">/</kbd> for commands</span>
+            </button>
               </motion.div>
             ) : (
               <div className="space-y-1">
