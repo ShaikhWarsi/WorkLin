@@ -1,8 +1,10 @@
+// src/components/PageEditor.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Page, BlockType, Block } from '../types/workspace';
 import { Block as BlockComponent } from './Block';
 import { Plus, History, LayoutGrid, Table as TableIcon, Calendar as CalendarIcon, List } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { PageProperties } from './PageProperties';
 
 import { CollaborationProvider } from './collaboration/CollaborationProvider';
 import { useToast } from '../hooks/use-toast';
@@ -15,22 +17,32 @@ import { CalendarView } from './views/CalendarView';
 import { ViewType, ViewDefinition } from '../types/view';
 import { getPagesByParent, updatePage, createPage } from '../lib/firebase/database';
 
+// Database Property Imports
+import { RelationProperty } from './database/RelationProperty';
+import { RollupProperty } from './database/RollupProperty';
+import { FormulaProperty } from './database/FormulaProperty';
+import { DatabaseProperty, RelationProperty as RelationType, RollupProperty as RollupType, FormulaProperty as FormulaType } from '../types/database';
+
 interface PageEditorProps {
   page: Page | undefined;
+  allPages: Page[]; // FIX: Change workspace to allPages array
   onAddBlock: (type: BlockType) => void;
   onUpdateBlock: (blockId: string, updates: Partial<Block>) => void;
   onDeleteBlock: (blockId: string) => void;
   onUpdatePageTitle: (title: string) => void;
   onUpdatePageCover: (url: string) => void;
+  onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
 }
 
 export const PageEditor: React.FC<PageEditorProps> = ({
   page,
+  allPages, // FIX: Use allPages instead of workspace
   onAddBlock,
   onUpdateBlock,
   onDeleteBlock,
   onUpdatePageTitle,
   onUpdatePageCover,
+  onUpdatePage,
 }) => {
   const [showHistory, setShowHistory] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -156,6 +168,9 @@ export const PageEditor: React.FC<PageEditorProps> = ({
     );
   }
 
+  // Cast properties to strongly typed DatabaseProperty record
+  const properties = page.properties as Record<string, DatabaseProperty> | undefined;
+
   return (
     <CollaborationProvider pageId={page.id}>
       <div className="flex-1 flex flex-col bg-white dark:bg-[#1e1e1e] overflow-hidden">
@@ -229,7 +244,64 @@ export const PageEditor: React.FC<PageEditorProps> = ({
               </div>
             </div>
 
-            {/* Content Area: View or Blocks */}
+            {/* Database Properties Section - FIX: Use allPages instead of workspace.pages */}
+            {allPages.length > 1 && (
+              <div className="mt-8">
+                <PageProperties
+                  page={page}
+                  allPages={allPages}
+                  onUpdatePage={(pageId, updates) => {
+                    if (onUpdatePage) {
+                      onUpdatePage(pageId, updates);
+                    }
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Database Properties Section */}
+            {properties && Object.keys(properties).length > 0 && (
+              <div className="mt-6 mb-8 p-4 border rounded-lg border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/20">
+                <div className="space-y-4">
+                  {Object.entries(properties).map(([name, property]) => {
+                    if (property.type === 'relation') {
+                      return (
+                        <RelationProperty
+                          key={name}
+                          page={page}
+                          property={property as RelationType}
+                          propertyName={name}
+                          allPages={allPages}
+                          onUpdate={(updatedPage) => onUpdatePage && onUpdatePage(page.id, updatedPage)}
+                        />
+                      );
+                    }
+                    if (property.type === 'rollup') {
+                      return (
+                        <RollupProperty
+                          key={name}
+                          page={page}
+                          property={property as RollupType}
+                          allPages={allPages}
+                        />
+                      );
+                    }
+                    if (property.type === 'formula') {
+                      return (
+                        <FormulaProperty
+                          key={name}
+                          page={page}
+                          property={property as FormulaType}
+                        />
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Blocks Container */}
             <div className="mt-8">
               {currentView ? (
                 <div className="min-h-[500px]">
