@@ -44,6 +44,16 @@ export const uploadFile = async (
       formData.append('public_id', options.publicId);
     }
     
+    // Defensive: ensure we do NOT send a 'transformation' parameter in the form data.
+    // Cloudinary will return 400 for unsigned uploads if 'transformation' is present.
+    if (formData.has('transformation')) {
+      formData.delete('transformation');
+    }
+    if (options?.transformation) {
+      // We will apply transformation via URL after upload (unsigned uploads disallow sending it).
+      console.warn('Not sending transformation in upload request for unsigned preset; applying via URL after upload.');
+    }
+
     // Note: Transformation parameter is NOT allowed with unsigned upload presets
     // Transformations should be applied via URL after upload or configured in the upload preset
     // See: https://cloudinary.com/documentation/upload_presets#unsigned_upload_preset_settings
@@ -63,14 +73,23 @@ export const uploadFile = async (
     if (!response.ok) {
       let errorMessage = 'Upload failed';
       try {
-        const error = await response.json();
-        errorMessage = error.error?.message || error.message || 'Upload failed';
+        // try JSON first, fallback to text so we see full server message
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const error = await response.json();
+          errorMessage = error.error?.message || error.message || JSON.stringify(error) || 'Upload failed';
+        } else {
+          const text = await response.text();
+          errorMessage = text || `Upload failed with status ${response.status}`;
+        }
         
         // Provide helpful error messages
         if (errorMessage.includes('Invalid upload preset')) {
           errorMessage = 'Invalid upload preset. Please check VITE_CLOUDINARY_UPLOAD_PRESET in .env';
         } else if (errorMessage.includes('Unauthorized')) {
           errorMessage = 'Unauthorized. Please check your Cloudinary credentials.';
+        } else if (errorMessage.includes('Transformation parameter is not allowed')) {
+          errorMessage = 'Cloudinary rejected a transformation parameter on an unsigned upload. Remove transformation from upload or use signed uploads.';
         }
       } catch (parseError) {
         errorMessage = `Upload failed with status ${response.status}`;
