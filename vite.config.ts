@@ -17,13 +17,21 @@ export default defineConfig({
   plugins: [
     react() // This plugin enables React features like JSX and Fast Refresh (hot reload)
   ],
-  
+
+  // Base URL for the app
+  base: '/',
+
   // Development server configuration
   server: {
-    port: 3000, // Run dev server on port 3000 instead of the default 5173
-                // This is more familiar for developers used to Create React App
+    port: 3000,
   },
-  
+
+  // Force Vite to re-bundle dependencies - fixes out of date cache errors
+  optimizeDeps: {
+    force: true,
+    include: ['idb'],
+  },
+
   // Note: Vite automatically handles:
   // - TypeScript compilation
   // - CSS processing (including Tailwind)
