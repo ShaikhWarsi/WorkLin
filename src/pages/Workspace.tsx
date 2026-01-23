@@ -10,7 +10,7 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { Menu } from 'lucide-react';
 import { Toaster } from '../components/ui/toaster';
 import { PageHeader } from '../components/PageHeader';
-import { subscribeToAuth, getCurrentUser } from '../lib/firebase/auth';
+import { subscribeToAuth } from '../lib/firebase/auth';
 
 export const Workspace: React.FC = () => {
   const navigate = useNavigate();
@@ -40,48 +40,15 @@ export const Workspace: React.FC = () => {
   } = useWorkspace();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
 
-  // Check if user is logged in (Firebase auth)
+  // Check if user is logged in (Firebase auth) - simple check
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    let isMounted = true;
-    
-    // Check current user immediately (synchronous check)
-    const currentUser = getCurrentUser();
-    if (currentUser && isMounted) {
-      setAuthChecked(true);
-    }
-    
-    // Also subscribe to auth changes (for logout/login events)
     const unsubscribe = subscribeToAuth((user) => {
-      if (!isMounted) return;
-      
-      setAuthChecked(true);
-      if (timeoutId) clearTimeout(timeoutId);
       if (!user) {
         navigate('/login');
       }
     });
-    
-    // Fallback timeout - if auth doesn't respond in 2 seconds, proceed anyway
-    // This prevents infinite loading if Firebase has issues
-    timeoutId = setTimeout(() => {
-      if (!isMounted) return;
-      
-      const userAfterTimeout = getCurrentUser();
-      setAuthChecked(true);
-      // If no user after timeout, redirect to login
-      if (!userAfterTimeout) {
-        navigate('/login');
-      }
-    }, 2000);
-    
-    return () => {
-      isMounted = false;
-      unsubscribe();
-      if (timeoutId) clearTimeout(timeoutId);
-    };
+    return () => unsubscribe();
   }, [navigate]);
 
   // Handle keyboard shortcuts
@@ -106,19 +73,6 @@ export const Workspace: React.FC = () => {
       setSidebarOpen(false);
     }
   }, [currentPageId]);
-
-  // Show loading state while checking authentication
-  // IMPORTANT: This must be AFTER all hooks to avoid React error #310
-  if (!authChecked) {
-    return (
-      <div className="flex h-screen bg-white dark:bg-[#1e1e1e] items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-screen bg-white dark:bg-[#1e1e1e] overflow-hidden">

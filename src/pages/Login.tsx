@@ -5,8 +5,7 @@ import { Input } from '../components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { ArrowLeft, LogIn, Lock, Mail, ArrowRight, KeyRound } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
-import { loginWithEmail, loginWithGoogle, signUpWithEmail, resetPassword, subscribeToAuth } from '../lib/firebase/auth';
-import { getCurrentUser } from '../lib/firebase/auth';
+import { loginWithEmail, loginWithGoogle, signUpWithEmail, resetPassword } from '../lib/firebase/auth';
 import { LogoIcon } from '../components/Logo';
 
 export const Login: React.FC = () => {
@@ -37,10 +36,7 @@ export const Login: React.FC = () => {
             title: 'Account created!',
             description: 'Welcome to WorkLin!',
           });
-          // Wait a moment for auth state to update, then navigate
-          setTimeout(() => {
-            navigate('/app');
-          }, 100);
+          navigate('/app');
         }
       } else {
         const { user, error } = await loginWithEmail(email, password);
@@ -55,10 +51,7 @@ export const Login: React.FC = () => {
             title: 'Welcome back!',
             description: 'You have been logged in successfully.',
           });
-          // Wait a moment for auth state to update, then navigate
-          setTimeout(() => {
-            navigate('/app');
-          }, 100);
+          navigate('/app');
         }
       }
     } finally {
@@ -81,10 +74,7 @@ export const Login: React.FC = () => {
           title: 'Welcome!',
           description: 'You have been logged in with Google.',
         });
-        // Wait a moment for auth state to update, then navigate
-        setTimeout(() => {
-          navigate('/app');
-        }, 100);
+        navigate('/app');
       }
     } finally {
       setLoading(false);
