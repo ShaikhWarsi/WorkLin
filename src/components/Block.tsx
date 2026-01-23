@@ -74,6 +74,7 @@ export const Block: React.FC<BlockProps> = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // UI state
   const [isEditing, setIsEditing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [showComments, setShowComments] = useState(false);
